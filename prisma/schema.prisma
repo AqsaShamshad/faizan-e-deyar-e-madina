@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "mongodb"
+  url      = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+enum Role {
+  SUPER_ADMIN
+  MOSQUE_ADMIN
+  USER
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model User {
+  id           String   @id @default(cuid()) @map("_id")
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  tenantId     String?
+  tenant       Tenant?  @relation("TenantAdmins", fields: [tenantId], references: [id], onDelete: SetNull)
+  auditEvents  AuditLog[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId, role])
+}
+
+model Tenant {
+  id        String       @id @default(cuid()) @map("_id")
+  name      String
+  timeZone  String       @default("Europe/London")
+  status    TenantStatus @default(ACTIVE)
+  deletedAt DateTime?
+  admins    User[]       @relation("TenantAdmins")
+  prayerTimes PrayerTime[]
+  azanTiming AzanTime?
+  newsItems NewsItem[]
+  slides    Slide[]
+  logos     Logo[]
+  auditLogs AuditLog[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([deletedAt, status])
+}
+
+model PrayerTime {
+  id        String   @id @default(cuid()) @map("_id")
+  tenantId  String
+  date      DateTime
+  timings   Json
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, date])
+}
+
+model AzanTime {
+  id        String   @id @default(cuid()) @map("_id")
+  tenantId  String   @unique
+  timings   Json
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NewsItem {
+  id        String   @id @default(cuid()) @map("_id")
+  tenantId  String
+  text      String
+  position  Int      @default(0)
+  isActive  Boolean  @default(true)
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, position])
+}
+
+model Slide {
+  id          String   @id @default(cuid()) @map("_id")
+  tenantId    String
+  fileName    String
+  contentType String
+  image       Bytes
+  duration    Int      @default(10)
+  position    Int      @default(0)
+  isActive    Boolean  @default(true)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, position])
+}
+
+model Logo {
+  id          String   @id @default(cuid()) @map("_id")
+  tenantId    String
+  fileName    String
+  contentType String
+  image       Bytes
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid()) @map("_id")
+  tenantId  String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([userId, createdAt])
+}
