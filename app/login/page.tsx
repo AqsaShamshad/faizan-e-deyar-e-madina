@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     <div className="brand-symbol"><span /></div>
     <p className="eyebrow">MOSQUE SCREEN / ADMINISTRATION</p>
     <h1>Welcome back</h1>
-    <p className="login-copy">Sign in to your Minbar account.</p>
+    <p className="login-copy">Sign in to your Faizan-e-deyar-e-Madinah account.</p>
     {reauth === "1" && <p className="signup-success" role="status">Your session no longer matches an active mosque administrator account. Please sign in again.</p>}
     {registered === "1" && <p className="signup-success" role="status">Account created. Sign in with your new credentials.</p>}
     <LoginForm />

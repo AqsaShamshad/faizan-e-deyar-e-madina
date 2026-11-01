@@ -35,17 +35,24 @@ model User {
 }
 
 model Tenant {
-  id        String       @id @default(cuid()) @map("_id")
-  name      String
-  timeZone  String       @default("Europe/London")
-  status    TenantStatus @default(ACTIVE)
-  deletedAt DateTime?
-  admins    User[]       @relation("TenantAdmins")
+  id            String       @id @default(cuid()) @map("_id")
+  name          String
+  address       String?
+  contactNumber String?
+  prayerCity    String?
+  prayerCountry String?
+  prayerMethod  Int          @default(15)
+  prayerSchool  Int          @default(1)
+  timeZone      String       @default("Europe/London")
+  status        TenantStatus @default(ACTIVE)
+  deletedAt     DateTime?
+  admins        User[]       @relation("TenantAdmins")
   prayerTimes PrayerTime[]
   azanTiming AzanTime?
   newsItems NewsItem[]
   slides    Slide[]
   logos     Logo[]
+  ringtone  Ringtone?
   auditLogs AuditLog[]
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -114,6 +121,17 @@ model Logo {
   updatedAt   DateTime @updatedAt
 
   @@index([tenantId, createdAt])
+}
+
+model Ringtone {
+  id          String   @id @default(cuid()) @map("_id")
+  tenantId    String   @unique
+  fileName    String
+  contentType String
+  audio       Bytes
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model AuditLog {

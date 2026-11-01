@@ -1,4 +1,5 @@
-import { Building2, Clock3, Images, Megaphone, ShieldCheck } from "lucide-react";
+import { Building2, CalendarDays, Clock3, Images, Megaphone, MonitorPlay, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth } from "@/auth";
@@ -12,29 +13,37 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
 	return (
 		<div className="admin-shell">
 			<aside className="sidebar">
-				<a href="/dashboard" className="brand-lockup">
+				<Link href="/dashboard" className="brand-lockup">
 					<span className="brand-symbol" aria-hidden="true"><span /></span>
-					<span><strong>Minbar</strong><small>MOSQUE SCREENS</small></span>
-				</a>
+					<span><strong>Faizan-e-deyar-e-Madinah</strong><small>MOSQUE SCREENS</small></span>
+				</Link>
 				<div className="sidebar-label">SCREEN CONTENT</div>
 				<nav aria-label="Dashboard sections">
-					<a className="nav-item" href="/dashboard#prayer-times"><Clock3 size={17} />Prayer times</a>
-					<a className="nav-item" href="/dashboard#azan-times"><Building2 size={17} />Azan timings</a>
-					<a className="nav-item" href="/dashboard#news-ticker"><Megaphone size={17} />News ticker</a>
-					<a className="nav-item" href="/dashboard#slides"><Images size={17} />Screen slides</a>
-					<a className="nav-item" href="/dashboard#logos"><Building2 size={17} />Mosque logos</a>
+					<Link className="nav-item" href="/dashboard/prayer-times"><Clock3 size={17} />Prayer times</Link>
+					<Link className="nav-item" href="/dashboard/monthly-calendar"><CalendarDays size={17} />Monthly calendar</Link>
+					<Link className="nav-item" href="/dashboard/news-ticker"><Megaphone size={17} />News ticker</Link>
+					<Link className="nav-item" href="/dashboard/screen-slides"><Images size={17} />Screen slides</Link>
+					<Link className="nav-item" href="/dashboard/mosque-logos"><Building2 size={17} />Mosque logos</Link>
 				</nav>
 				<div className="sidebar-bottom">
 					<div className="secure-label"><ShieldCheck size={16} /><span>Protected workspace</span></div>
 					<div className="account-chip">
-						<span className="account-initial">{session.user.name?.slice(0, 1).toUpperCase() ?? "A"}</span>
-						<span><strong>{session.user.name ?? "Administrator"}</strong><small>Mosque administrator</small></span>
+						<span className="account-initial"><Building2 size={15} aria-hidden="true" /></span>
+						<span><strong>Mosque workspace</strong><small>Mosque administrator</small></span>
 					</div>
 					<form action={logout}><button className="logout-button" type="submit">Sign out</button></form>
 				</div>
 			</aside>
 			<div className="admin-content">
-				<header className="topbar"><span>{session.user.name ?? "Mosque administrator"}</span><span className="topbar-status"><i />Screen workspace</span></header>
+				<header className="topbar">
+					<span>Mosque workspace</span>
+					<div className="dashboard-topbar-actions">
+						<Link className="button button-secondary dashboard-screen-link" href={`/screen/${session.user.tenantId}`} target="_blank" rel="noopener noreferrer">
+							<MonitorPlay size={15} aria-hidden="true" /> View screen
+						</Link>
+						<span className="topbar-status"><i />Screen workspace</span>
+					</div>
+				</header>
 				{children}
 			</div>
 		</div>

@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  devIndicators: false,
+  serverExternalPackages: ["all-the-cities"],
+  outputFileTracingIncludes: {
+    "/api/locations/cities": ["./node_modules/all-the-cities/cities.pbf"],
+  },
   experimental: {
     agentFeedback: true,
     serverActions: { bodySizeLimit: "5mb" },

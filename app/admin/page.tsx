@@ -20,6 +20,8 @@ export default async function AdminPage() {
       initialTenants={tenants.map((tenant) => ({
         id: tenant.id,
         name: tenant.name,
+        address: tenant.address ?? "",
+        contactNumber: tenant.contactNumber ?? "",
         status: tenant.status,
         adminName: tenant.admins[0]?.name ?? "Account unavailable",
         email: tenant.admins[0]?.email ?? "",

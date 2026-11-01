@@ -1,4 +1,4 @@
-# Minbar Mosque Screen
+# Faizan-e-deyar-e-Madinah Mosque Screen
 
 Multi-tenant mosque prayer-time administration and public display built with Next.js, Prisma, and MongoDB.
 
@@ -21,7 +21,7 @@ The application uses Prisma transactions for account provisioning and atomic tim
 
 3. Set `AUTH_SECRET` to a long, random secret. Set `SUPER_ADMIN_NAME`, `SUPER_ADMIN_EMAIL`, and `SUPER_ADMIN_PASSWORD`; the seed script requires a password of at least 12 characters.
 
-4. To email a newly created mosque administrator their screen link, set `APP_URL` to the public site origin and configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`. Keep SMTP credentials only in `.env`. Without SMTP settings, mosque creation still succeeds and the super administrator can copy the generated link from the confirmation dialog.
+4. To email a newly created mosque administrator their screen link and login details, set `APP_URL` to the public site origin and configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`. The email includes the administrator's email and initial password; resetting a mosque administrator's password from `/admin` also emails the updated login details. Keep SMTP credentials only in `.env`, and share account details only with the intended administrator. Without SMTP settings, account creation and password resets still succeed but their details are not emailed.
 
 5. Validate the Prisma schema, generate the client, and apply the schema to your MongoDB database:
 
@@ -43,7 +43,7 @@ The application uses Prisma transactions for account provisioning and atomic tim
    npm run dev
    ```
 
-Open `http://localhost:3000/login`. The super administrator can create mosque-admin accounts from `/admin`. Mosque administrators manage their mosque at `/dashboard`. Each public display has one unique ID-based link at `/screen/<tenant-id>`; the app emails this link to the mosque administrator when the account is created.
+Open `http://localhost:3000/login`. The super administrator can create mosque-admin accounts from `/admin`. Mosque administrators manage their mosque at `/dashboard`. Each public display has one unique ID-based link at `/screen/<tenant-id>`; the app emails this link and administrator login details when the account is created.
 
 ## Database Notes
 

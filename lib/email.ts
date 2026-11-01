@@ -10,7 +10,7 @@ function escapeHtml(value: string) {
   })[character] ?? character);
 }
 
-export async function sendMosqueScreenLink({ to, name, url }: { to: string; name: string; url: string }) {
+export async function sendMosqueAccountDetails({ to, name, adminName, password, url }: { to: string; name: string; adminName: string; password: string; url: string }) {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM } = process.env;
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD || !SMTP_FROM) return false;
 
@@ -38,13 +38,18 @@ export async function sendMosqueScreenLink({ to, name, url }: { to: string; name
   });
 
   const safeName = escapeHtml(name);
+  const safeAdminName = escapeHtml(adminName);
+  const safeEmail = escapeHtml(to);
+  const safePassword = escapeHtml(password);
   const safeUrl = escapeHtml(url);
+  const loginUrl = new URL("/login", parsedUrl).toString();
+  const safeLoginUrl = escapeHtml(loginUrl);
   await transport.sendMail({
     from: SMTP_FROM,
     to,
-    subject: `${name} mosque screen link`,
-    text: `Your mosque screen is ready. Open this link on the display device:\n\n${url}\n\nKeep this link for your mosque display.`,
-    html: `<p>Your mosque screen for ${safeName} is ready.</p><p>Open this link on the display device:</p><p><a href="${safeUrl}">${safeUrl}</a></p><p>Keep this link for your mosque display.</p>`,
+    subject: `${name} mosque screen and account details`,
+    text: `Your mosque screen and administrator account for ${name} are ready.\n\nAdministrator: ${adminName}\nLogin page: ${loginUrl}\nEmail: ${to}\nInitial password: ${password}\n\nOpen this link on the display device:\n${url}\n\nKeep this link for your mosque display and share the account details only with the mosque administrator.`,
+    html: `<p>Your mosque screen and administrator account for ${safeName} are ready.</p><p><strong>Administrator:</strong> ${safeAdminName}<br><strong>Login page:</strong> <a href="${safeLoginUrl}">${safeLoginUrl}</a><br><strong>Email:</strong> ${safeEmail}<br><strong>Initial password:</strong> ${safePassword}</p><p>Open this link on the display device:</p><p><a href="${safeUrl}">${safeUrl}</a></p><p>Keep this link for your mosque display and share the account details only with the mosque administrator.</p>`,
   });
   return true;
 }

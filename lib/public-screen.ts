@@ -1,11 +1,17 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getJumuaTimes, prayerTimingRecord } from "@/lib/prayer-times";
 
 const screenKeySchema = z.cuid();
 const imageIdSchema = z.cuid();
-const timingSchema = z.record(z.string(), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/));
+const ringtoneIdSchema = z.cuid();
+const timeValueSchema = z.union([
+  z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  z.literal(""),
+]);
+const timingSchema = z.record(z.string(), z.union([timeValueSchema, z.array(timeValueSchema)]));
 
-export type PublicSchedule = { date: string; timings: Record<string, string> };
+export type PublicSchedule = { date: string; timings: Record<string, string>; jumuaTimes: string[] };
 export type PublicScreenData = {
   status: "active" | "inactive";
   tenantName?: string;
@@ -14,6 +20,8 @@ export type PublicScreenData = {
   news?: Array<{ id: string; text: string }>;
   slides?: Array<{ id: string; duration: number }>;
   logoId?: string;
+  ringtoneId?: string;
+  ringtoneContentType?: string;
 };
 
 function localDateKey(date: Date, timeZone: string) {
@@ -52,7 +60,7 @@ export async function getPublicScreenData(tenantId: string): Promise<PublicScree
   const start = new Date(`${today}T00:00:00.000Z`);
   const end = new Date(`${nextDateKey(today, 8)}T00:00:00.000Z`);
 
-  const [prayerTimes, news, slides, logo] = await Promise.all([
+  const [prayerTimes, news, slides, logo, ringtone] = await Promise.all([
     prisma.prayerTime.findMany({
       where: { tenantId: tenant.id, date: { gte: start, lt: end } },
       orderBy: { date: "asc" },
@@ -73,6 +81,10 @@ export async function getPublicScreenData(tenantId: string): Promise<PublicScree
       orderBy: { createdAt: "desc" },
       select: { id: true },
     }),
+    prisma.ringtone.findUnique({
+      where: { tenantId: tenant.id },
+      select: { id: true, contentType: true },
+    }),
   ]);
 
   return {
@@ -81,11 +93,19 @@ export async function getPublicScreenData(tenantId: string): Promise<PublicScree
     timeZone: tenant.timeZone,
     schedules: prayerTimes.flatMap(({ date, timings }) => {
       const parsed = timingSchema.safeParse(timings);
-      return parsed.success ? [{ date: date.toISOString().slice(0, 10), timings: parsed.data }] : [];
+      return parsed.success
+        ? [{
+            date: date.toISOString().slice(0, 10),
+            timings: prayerTimingRecord(parsed.data),
+            jumuaTimes: getJumuaTimes(parsed.data),
+          }]
+        : [];
     }),
     news,
     slides,
     logoId: logo?.id,
+    ringtoneId: ringtone?.id,
+    ringtoneContentType: ringtone?.contentType,
   };
 }
 
@@ -105,8 +125,25 @@ export async function getPublicScreenAsset(tenantId: string, kind: "slide" | "lo
       select: { image: true, contentType: true },
     });
   }
+
   return prisma.logo.findFirst({
     where: { id, tenantId: tenant.id },
     select: { image: true, contentType: true },
+  });
+}
+
+export async function getPublicRingtoneAsset(tenantId: string, id: string) {
+  const validKey = screenKeySchema.safeParse(tenantId);
+  if (!validKey.success || !ringtoneIdSchema.safeParse(id).success) return null;
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: validKey.data },
+    select: { id: true, status: true, deletedAt: true },
+  });
+  if (!tenant || tenant.status !== "ACTIVE" || tenant.deletedAt) return null;
+
+  return prisma.ringtone.findFirst({
+    where: { id, tenantId: tenant.id },
+    select: { audio: true, contentType: true },
   });
 }

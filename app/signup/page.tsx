@@ -16,7 +16,7 @@ export default async function SignupPage() {
   return (
     <main className="login-page">
       <section className="login-panel">
-        <Link href="/login" aria-label="Minbar sign in" className="brand-symbol"><span /></Link>
+        <Link href="/login" aria-label="Faizan-e-deyar-e-Madinah sign in" className="brand-symbol"><span /></Link>
         <p className="eyebrow">MOSQUE SCREEN / ACCOUNT</p>
         <h1>Create your account</h1>
         <p className="login-copy">Register for a standard user account. Mosque administrator access is assigned separately.</p>

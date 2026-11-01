@@ -1,7 +1,7 @@
-import { DashboardContent } from "./dashboard-content";
+import { redirect } from "next/navigation";
 
 export const instant = false;
 
 export default function DashboardPage() {
-  return <DashboardContent />;
+  redirect("/dashboard/prayer-times");
 }

@@ -7,15 +7,17 @@ import { z } from "zod";
 import { Building2, Check, ChevronDown, Copy, KeyRound, LoaderCircle, Pencil, Plus, Search, ShieldCheck, SlidersHorizontal, Trash2, X } from "lucide-react";
 import {
   createTenantAccount,
+  deleteTenantAccount,
   resetTenantPassword,
   setTenantStatus,
-  softDeleteTenant,
   updateTenantAccount,
 } from "./actions";
 
 type Tenant = {
   id: string;
   name: string;
+  address: string;
+  contactNumber: string;
   status: "ACTIVE" | "SUSPENDED";
   adminName: string;
   email: string;
@@ -24,6 +26,8 @@ type Tenant = {
 
 const formSchema = z.object({
   name: z.string().trim().min(2, "Enter the mosque name.").max(120),
+  address: z.string().trim().max(300, "Address must be 300 characters or fewer."),
+  contactNumber: z.string().trim().max(40, "Contact number must be 40 characters or fewer."),
   adminName: z.string().trim().min(2, "Enter an account name.").max(120),
   email: z.email("Enter a valid email address."),
   password: z.string().optional(),
@@ -43,7 +47,7 @@ export function MosqueAccounts({ initialTenants }: Props) {
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
   const filtered = tenants.filter((tenant) => {
-    const matchesSearch = `${tenant.name} ${tenant.email} ${tenant.id}`.toLowerCase().includes(deferredSearch);
+    const matchesSearch = `${tenant.name} ${tenant.address} ${tenant.contactNumber} ${tenant.email} ${tenant.id}`.toLowerCase().includes(deferredSearch);
     return matchesSearch && (filter === "ALL" || tenant.status === filter);
   });
 
@@ -73,9 +77,9 @@ export function MosqueAccounts({ initialTenants }: Props) {
   }
 
   function performDelete(tenant: Tenant) {
-    if (!window.confirm(`Delete ${tenant.name}? It will be hidden from the mosque list and its admin login will stop working.`)) return;
+    if (!window.confirm(`Permanently delete ${tenant.name}, its administrator login, and all mosque data? This cannot be undone.`)) return;
     startTransition(async () => {
-      const result = await softDeleteTenant(tenant.id);
+      const result = await deleteTenantAccount(tenant.id);
       if (!result.success) return notify(result.message);
       setTenants((items) => items.filter((item) => item.id !== tenant.id));
       notify(result.message);
@@ -126,7 +130,7 @@ export function MosqueAccounts({ initialTenants }: Props) {
         {filtered.length ? <div className="table-scroll"><table>
           <thead><tr><th scope="col">Mosque</th><th scope="col">Administrator</th><th scope="col">Screen ID</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
           <tbody>{filtered.map((tenant) => <tr key={tenant.id}>
-            <td><div className="mosque-cell"><span className="mosque-avatar">{tenant.name.slice(0, 1).toUpperCase()}</span><span><strong>{tenant.name}</strong><small>Added {new Date(tenant.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small></span></div></td>
+            <td><div className="mosque-cell"><span className="mosque-avatar">{tenant.name.slice(0, 1).toUpperCase()}</span><span><strong>{tenant.name}</strong><small>Added {new Date(tenant.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</small>{tenant.address && <small className="mosque-details">{tenant.address}</small>}{tenant.contactNumber && <small className="mosque-details">{tenant.contactNumber}</small>}</span></div></td>
             <td><span className="admin-name">{tenant.adminName}</span><small className="table-subtext">{tenant.email}</small></td>
             <td><code className="slug-cell screen-id-cell">{tenant.id}</code></td>
             <td><span className={`status status-${tenant.status.toLowerCase()}`}><i aria-hidden="true" />{tenant.status === "ACTIVE" ? "Active" : "Suspended"}</span></td>
@@ -171,7 +175,7 @@ function AccountDialog({ mode, tenant, onClose, onSaved }: {
   const [pending, startTransition] = useTransition();
   const form = useForm<AccountFields>({
     resolver: zodResolver(formSchema),
-    defaultValues: tenant ? { name: tenant.name, adminName: tenant.adminName, email: tenant.email, password: "" } : { name: "", adminName: "", email: "", password: "" },
+    defaultValues: tenant ? { name: tenant.name, address: tenant.address, contactNumber: tenant.contactNumber, adminName: tenant.adminName, email: tenant.email, password: "" } : { name: "", address: "", contactNumber: "", adminName: "", email: "", password: "" },
   });
 
   function submit(values: AccountFields) {
@@ -184,7 +188,7 @@ function AccountDialog({ mode, tenant, onClose, onSaved }: {
         for (const [field, errors] of Object.entries(result.fieldErrors ?? {})) form.setError(field as keyof AccountFields, { message: errors?.[0] });
         return;
       }
-      const savedTenant = { id: result.id ?? tenant?.id ?? "", name: values.name, status: tenant?.status ?? "ACTIVE" as const, adminName: values.adminName, email: values.email.toLowerCase(), createdAt: tenant?.createdAt ?? new Date().toISOString() };
+      const savedTenant = { id: result.id ?? tenant?.id ?? "", name: values.name, address: values.address ?? "", contactNumber: values.contactNumber ?? "", status: tenant?.status ?? "ACTIVE" as const, adminName: values.adminName, email: values.email.toLowerCase(), createdAt: tenant?.createdAt ?? new Date().toISOString() };
       if (mode === "create" && result.screenUrl) {
         setDelivery({ url: result.screenUrl, emailSent: Boolean(result.emailSent) });
         onSaved(result.message, savedTenant, true);
@@ -233,6 +237,8 @@ function AccountDialog({ mode, tenant, onClose, onSaved }: {
       </form> : <form className="account-form" onSubmit={form.handleSubmit(submit)} noValidate>
         {formMessage && <p className="form-message" role="alert">{formMessage}</p>}
         <Field label="Mosque name" name="name" error={form.formState.errors.name?.message}><input autoFocus autoComplete="organization" {...form.register("name")} /></Field>
+        <Field label="Address" name="address" error={form.formState.errors.address?.message}><input autoComplete="street-address" {...form.register("address")} /></Field>
+        <Field label="Contact number" name="contactNumber" error={form.formState.errors.contactNumber?.message}><input type="tel" autoComplete="tel" {...form.register("contactNumber")} /></Field>
         <div className="form-grid"><Field label="Administrator name" name="adminName" error={form.formState.errors.adminName?.message}><input autoComplete="name" {...form.register("adminName")} /></Field><Field label="Email address" name="email" error={form.formState.errors.email?.message}><input type="email" autoComplete="email" {...form.register("email")} /></Field></div>
         {mode === "create" && <Field label="Temporary password" name="password" error={password.length > 0 && password.length < 12 ? "Use at least 12 characters." : undefined} hint="The administrator can use this to sign in immediately."><input required minLength={12} autoComplete="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></Field>}
         <div className="dialog-actions">{mode === "edit" && <button type="button" className="button button-quiet password-reset" onClick={() => onSaved("", undefined)}><KeyRound size={15} />Reset password</button>}<span className="action-spacer" /><button type="button" className="button button-quiet" onClick={onClose}>Cancel</button><button className="button button-primary" disabled={pending || (mode === "create" && password.length < 12)}>{pending && <LoaderCircle className="spin" size={16} />}{mode === "create" ? "Create account" : "Save changes"}</button></div>
