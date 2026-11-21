@@ -897,10 +897,13 @@ td { height: 68px; padding: 10px 14px; border-top: 1px solid var(--line); font-s
   .mobile-menu-toggle:hover { background: var(--surface-muted); }
   .mobile-menu-overlay {
     position: fixed;
+    z-index: 40;
     inset: 58px 0 0;
     background: rgb(5 26 43 / 42%);
   }
   .mobile-nav-drawer {
+    position: fixed;
+    z-index: 41;
     top: 58px;
     bottom: 0;
     left: 0;
