@@ -1991,7 +1991,7 @@ td { height: 68px; padding: 10px 14px; border-top: 1px solid var(--line); font-s
   #slides .managed-list { gap: 10px; border-top: 0; }
   #slides .slide-managed-row {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: 10px;
     padding: 12px;
@@ -2009,8 +2009,10 @@ td { height: 68px; padding: 10px 14px; border-top: 1px solid var(--line); font-s
     gap: 7px;
   }
   #slides .slide-preview {
-    width: 72px;
-    height: 56px;
+    width: 100%;
+    height: auto;
+    max-height: 120px;
+    aspect-ratio: 16 / 9;
     border-radius: 8px;
   }
   #slides .slide-card-heading {
@@ -2037,24 +2039,13 @@ td { height: 68px; padding: 10px 14px; border-top: 1px solid var(--line); font-s
     grid-column: 2;
     grid-row: 1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 8px;
   }
   #slides .slide-edit-field {
     display: grid;
     min-width: 0;
     gap: 5px;
-  }
-  #slides .slide-edit-field > span {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    margin: 0;
-    clip: auto;
-    white-space: normal;
-    color: var(--muted);
-    font-size: 10px;
-    font-weight: 600;
   }
   #slides .slide-edit-field > input {
     width: 100%;
@@ -2146,32 +2137,38 @@ td { height: 68px; padding: 10px 14px; border-top: 1px solid var(--line); font-s
 
 @media (min-width: 762px) {
   #slides .slide-managed-row {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 20px;
     padding: 14px 0;
   }
 
-  /* LEFT: image + name */
   #slides .slide-card-header {
-    display: flex;
-    flex: 1;
+    display: grid;
     min-width: 0;
-    align-items: center;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-content: start;
+    justify-items: start;
     gap: 14px;
   }
   #slides .slide-preview {
-    width: 128px;
-    height: 80px;
+    width: 100%;
+    height: auto;
+    max-height: 180px;
+    aspect-ratio: 16 / 9;
     border-radius: 6px;
   }
   #slides .slide-status-badge { display: none; }
 
-  /* RIGHT: manage controls */
   #slides .slide-edit-form {
-    flex: none;
-    margin-left: auto;
-    align-items: flex-end;
+    display: grid;
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    width: 100%;
     gap: 10px;
   }
   #slides .slide-edit-field { display: grid; gap: 3px; }
@@ -2186,8 +2183,12 @@ td { height: 68px; padding: 10px 14px; border-top: 1px solid var(--line); font-s
     font-size: 9px;
     font-weight: 600;
   }
+  #slides .slide-edit-field > input { width: 100%; }
+  #slides .slide-save-button { grid-column: 1 / -1; }
   #slides .slide-actions {
-    flex: none;
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: flex-end;
     gap: 8px;
   }
 }
