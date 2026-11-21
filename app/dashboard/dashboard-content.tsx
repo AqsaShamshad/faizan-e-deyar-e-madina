@@ -44,6 +44,7 @@ export async function DashboardContent({
       prayerCountry: true,
       prayerMethod: true,
       prayerSchool: true,
+      slideshowPauseDuration: true,
       newsItems: {
         orderBy: [{ position: "asc" }, { createdAt: "asc" }],
         select: { id: true, text: true, position: true, isActive: true },
@@ -96,13 +97,13 @@ export async function DashboardContent({
 
   return (
     <main className={`admin-main${section === "monthly-calendar" ? " monthly-calendar-main" : ""}`}>
-      <header className="admin-heading">
+      {/* <header className="admin-heading">
         <div>
           <p className="eyebrow">MOSQUE WORKSPACE</p>
           <h1>{tenant.name}</h1>
           <p className="heading-copy">Manage the prayer times and content shown on your mosque screen.</p>
         </div>
-      </header>
+      </header> */}
       <DashboardModules
         section={section}
         schedules={schedules}
@@ -111,6 +112,7 @@ export async function DashboardContent({
         countryOptions={countryOptions}
         prayerMethod={tenant.prayerMethod}
         prayerSchool={tenant.prayerSchool}
+        slideshowPauseDuration={tenant.slideshowPauseDuration}
         initialMonth={initialMonth}
         newsItems={tenant.newsItems}
         slides={tenant.slides}

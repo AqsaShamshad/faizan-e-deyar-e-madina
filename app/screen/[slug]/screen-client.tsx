@@ -77,6 +77,19 @@ function clockMinutes(date: Date, timeZone: string) {
   return hour * 60 + minute;
 }
 
+function clockSeconds(date: Date, timeZone: string) {
+  const values = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(values.find((part) => part.type === type)?.value ?? 0);
+  return value("hour") * 3600 + value("minute") * 60 + value("second");
+}
+
 function getNextPrayer(data: PublicScreenData, now: Date) {
   const zone = data.timeZone ?? "UTC";
   const today = localDateKey(now, zone);
@@ -138,6 +151,7 @@ export function PrayerScreen({ screenId, initialData }: Props) {
   const [ringtoneSecondsRemaining, setRingtoneSecondsRemaining] = useState(0);
   const ringtoneRef = useRef<HTMLMediaElement>(null);
   const ringtoneStopTimer = useRef<number | null>(null);
+  const wasPausedForPrayer = useRef(false);
   const pendingAlerts = useRef(new Set<string>());
   const handledAlerts = useRef(new Set<string>());
   const schedule = useMemo(() => {
@@ -151,7 +165,27 @@ export function PrayerScreen({ screenId, initialData }: Props) {
   );
   const slides = data.slides ?? noSlides;
   const activeSlide = slides[slideIndex % Math.max(slides.length, 1)];
-
+  const activeSlideId = activeSlide?.id;
+  const activeSlideDuration = activeSlide?.duration;
+  const slideshowPauseDuration = data.slideshowPauseDuration ?? 0;
+  const secondsSinceMidnight = now
+    ? clockSeconds(now, data.timeZone ?? "UTC")
+    : -1;
+  const isSlideshowPaused = Boolean(
+    now &&
+    schedule &&
+    slideshowPauseDuration > 0 &&
+    prayerRows.some((prayer) => {
+      const startTime = schedule.timings[`${prayer.key}Start`];
+      if (!startTime) return false;
+      const [hour, minute] = startTime.split(":").map(Number);
+      const pauseStartsAt = hour * 3600 + minute * 60;
+      return (
+        secondsSinceMidnight >= pauseStartsAt &&
+        secondsSinceMidnight < pauseStartsAt + slideshowPauseDuration
+      );
+    }),
+  );
   const startRingtone = useCallback(async () => {
     const ringtone = ringtoneRef.current;
     if (!ringtone) return false;
@@ -245,13 +279,22 @@ export function PrayerScreen({ screenId, initialData }: Props) {
   }, [screenId]);
 
   useEffect(() => {
-    if (!activeSlide || slides.length < 2) return;
-    const timer = window.setInterval(
-      () => setSlideIndex((index) => (index + 1) % slides.length),
-      activeSlide.duration * 1000,
-    );
-    return () => window.clearInterval(timer);
-  }, [activeSlide, slides]);
+    if (!activeSlideId || activeSlideDuration === undefined) return;
+    if (isSlideshowPaused) {
+      wasPausedForPrayer.current = true;
+      return;
+    }
+    if (wasPausedForPrayer.current) {
+      wasPausedForPrayer.current = false;
+      setSlideIndex((index) => (index + 1) % slides.length);
+      return;
+    }
+    if (slides.length < 2) return;
+    const timer = window.setTimeout(() => {
+      setSlideIndex((index) => (index + 1) % slides.length);
+    }, activeSlideDuration * 1000);
+    return () => window.clearTimeout(timer);
+  }, [activeSlideDuration, activeSlideId, isSlideshowPaused, slides.length]);
 
   useEffect(() => {
     if (ringtoneSecondsRemaining <= 0) return;
@@ -499,17 +542,17 @@ export function PrayerScreen({ screenId, initialData }: Props) {
             </div>
           )}
 
-          {slides.length > 1 && (
+          {slides.length > 1 && !isSlideshowPaused && (
             <>
               <button
                 className="screen-carousel-control screen-carousel-previous"
                 type="button"
                 aria-label="Previous announcement"
-                onClick={() =>
+                onClick={() => {
                   setSlideIndex(
                     (index) => (index - 1 + slides.length) % slides.length,
-                  )
-                }
+                  );
+                }}
               >
                 <ChevronLeft aria-hidden="true" />
               </button>
@@ -517,9 +560,9 @@ export function PrayerScreen({ screenId, initialData }: Props) {
                 className="screen-carousel-control screen-carousel-next"
                 type="button"
                 aria-label="Next announcement"
-                onClick={() =>
+                onClick={() => {
                   setSlideIndex((index) => (index + 1) % slides.length)
-                }
+                }}
               >
                 <ChevronRight aria-hidden="true" />
               </button>

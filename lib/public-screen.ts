@@ -16,6 +16,7 @@ export type PublicScreenData = {
   status: "active" | "inactive";
   tenantName?: string;
   timeZone?: string;
+  slideshowPauseDuration?: number;
   schedules?: PublicSchedule[];
   news?: Array<{ id: string; text: string }>;
   slides?: Array<{ id: string; duration: number }>;
@@ -47,7 +48,14 @@ export async function getPublicScreenData(tenantId: string): Promise<PublicScree
 
   const tenant = await prisma.tenant.findUnique({
     where: { id: validKey.data },
-    select: { id: true, name: true, timeZone: true, status: true, deletedAt: true },
+    select: {
+      id: true,
+      name: true,
+      timeZone: true,
+      slideshowPauseDuration: true,
+      status: true,
+      deletedAt: true,
+    },
   });
   if (!tenant || tenant.status !== "ACTIVE" || tenant.deletedAt) return { status: "inactive" };
 
@@ -91,6 +99,7 @@ export async function getPublicScreenData(tenantId: string): Promise<PublicScree
     status: "active",
     tenantName: tenant.name,
     timeZone: tenant.timeZone,
+    slideshowPauseDuration: tenant.slideshowPauseDuration,
     schedules: prayerTimes.flatMap(({ date, timings }) => {
       const parsed = timingSchema.safeParse(timings);
       return parsed.success

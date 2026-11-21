@@ -44,6 +44,7 @@ model Tenant {
   prayerMethod  Int          @default(15)
   prayerSchool  Int          @default(1)
   timeZone      String       @default("Europe/London")
+  slideshowPauseDuration     Int          @default(0) @map("prayerTimesDisplayDuration")
   status        TenantStatus @default(ACTIVE)
   deletedAt     DateTime?
   admins        User[]       @relation("TenantAdmins")

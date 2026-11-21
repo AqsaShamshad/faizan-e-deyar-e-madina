@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import heicConvert from "heic-convert";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getJumuaTimes, prayerTimingRecord } from "@/lib/prayer-times";
@@ -24,6 +25,7 @@ const scheduleSchema = z.object({
 });
 
 const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const heicImageTypes = new Set(["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"]);
 const maxImageSize = 4 * 1024 * 1024;
 const audioTypes = new Set([
   "audio/mpeg", "audio/wav", "audio/x-wav", "audio/wave", "audio/vnd.wave", "audio/x-pn-wav",
@@ -275,13 +277,38 @@ export async function createSlide(formData: FormData) {
   const { tenantId, userId } = await requireMosqueTenant();
   const file = formData.get("file");
   const duration = z.coerce.number().int().min(5).max(120).safeParse(formData.get("duration"));
-  if (!(file instanceof File) || !imageTypes.has(file.type) || file.size < 1 || file.size > maxImageSize || !duration.success) {
-    throw new Error("Choose a JPEG, PNG, or WebP image under 4 MB and a duration from 5 to 120 seconds.");
+  if (!(file instanceof File) || file.size < 1 || file.size > maxImageSize || !duration.success) {
+    throw new Error("Choose a JPEG, PNG, WebP, HEIC, or HEIF image under 4 MB and a duration from 5 to 120 seconds.");
+  }
+  const isHeic = heicImageTypes.has(file.type.toLowerCase()) || /\.(heic|heif)$/i.test(file.name);
+  if (!isHeic && !imageTypes.has(file.type)) {
+    throw new Error("Choose a JPEG, PNG, WebP, HEIC, or HEIF image under 4 MB.");
+  }
+  let image = new Uint8Array(await file.arrayBuffer());
+  let contentType = file.type;
+  let fileName = file.name.slice(0, 255);
+  if (isHeic) {
+    try {
+      const converted = await heicConvert({
+        buffer: image,
+        format: "JPEG",
+        quality: 0.85,
+      });
+      image = new Uint8Array(converted.byteLength);
+      image.set(converted);
+    } catch {
+      throw new Error("This HEIC/HEIF photo could not be converted. Please try a different photo or upload it as JPEG.");
+    }
+    if (image.byteLength > maxImageSize) {
+      throw new Error("The converted slide image must be under 4 MB.");
+    }
+    contentType = "image/jpeg";
+    fileName = `${file.name.replace(/\.(heic|heif)$/i, "")}.jpg`.slice(0, 255);
   }
   const position = await prisma.slide.count({ where: { tenantId } });
   const slide = await prisma.slide.create({ data: {
-    tenantId, fileName: file.name.slice(0, 255), contentType: file.type,
-    image: new Uint8Array(await file.arrayBuffer()), duration: duration.data, position,
+    tenantId, fileName, contentType,
+    image, duration: duration.data, position,
   } });
   await prisma.auditLog.create({ data: { tenantId, userId, action: "CREATE", entity: "Slide", entityId: slide.id } });
   revalidateDashboard();
@@ -293,8 +320,38 @@ export async function updateSlide(id: string, formData: FormData) {
   const duration = z.coerce.number().int().min(5).max(120).safeParse(formData.get("duration"));
   const position = z.coerce.number().int().min(0).max(10000).safeParse(formData.get("position"));
   if (!parsedId.success || !duration.success || !position.success) throw new Error("Check the slide duration and order.");
-  const updated = await prisma.slide.updateMany({ where: { id, tenantId }, data: { duration: duration.data, position: position.data } });
+  const updated = await prisma.slide.updateMany({
+    where: { id, tenantId },
+    data: { duration: duration.data, position: position.data },
+  });
   if (!updated.count) throw new Error("Slide not found.");
+  revalidateDashboard();
+}
+
+export async function saveSlideshowPauseDuration(formData: FormData) {
+  const { tenantId, userId } = await requireMosqueTenant();
+  const duration = z.string()
+    .regex(/^(0|[1-9]\d*)$/)
+    .transform(Number)
+    .pipe(z.number().int().min(0).max(120))
+    .safeParse(formData.get("slideshowPauseDuration"));
+  if (!duration.success) {
+    throw new Error("Set the slideshow pause duration between 0 and 120 seconds.");
+  }
+  const updated = await prisma.tenant.updateMany({
+    where: { id: tenantId },
+    data: { slideshowPauseDuration: duration.data },
+  });
+  if (!updated.count) throw new Error("Mosque workspace not found.");
+  await prisma.auditLog.create({
+    data: {
+      tenantId,
+      userId,
+      action: "UPDATE",
+      entity: "Tenant",
+      details: { slideshowPauseDuration: duration.data },
+    },
+  });
   revalidateDashboard();
 }
 

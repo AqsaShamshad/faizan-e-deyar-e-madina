@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { auth } from "@/auth";
 import { logout } from "../admin/logout-action";
+import { MobileDashboardMenu } from "./mobile-menu";
 
 export default async function DashboardLayout({ children }: LayoutProps<"/dashboard">) {
 	await connection();
@@ -17,6 +18,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
 					<span className="brand-symbol" aria-hidden="true"><span /></span>
 					<span><strong>Faizan-e-deyar-e-Madinah</strong><small>MOSQUE SCREENS</small></span>
 				</Link>
+				<MobileDashboardMenu />
 				<div className="sidebar-label">SCREEN CONTENT</div>
 				<nav aria-label="Dashboard sections">
 					<Link className="nav-item" href="/dashboard/prayer-times"><Clock3 size={17} />Prayer times</Link>

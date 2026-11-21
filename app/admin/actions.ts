@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { getAppOrigin } from "@/lib/app-url";
 import { sendMosqueAccountDetails } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { notDeletedTenantWhere } from "@/lib/tenant";
@@ -37,6 +38,7 @@ export async function createTenantAccount(input: unknown): Promise<ActionResult>
   const parsed = baseSchema.extend({ password: passwordSchema }).safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
 
+  const appOrigin = await getAppOrigin();
   const { name, address, contactNumber, adminName, email, password } = parsed.data;
   const existingAdmin = await prisma.user.findUnique({
     where: { email },
@@ -64,8 +66,7 @@ export async function createTenantAccount(input: unknown): Promise<ActionResult>
       await transaction.user.create({ data: { name: adminName, email, passwordHash, role: "MOSQUE_ADMIN", tenantId: tenant.id } });
       return tenant;
     });
-    const appUrl = process.env.APP_URL?.replace(/\/$/, "");
-    const screenUrl = appUrl ? `${appUrl}/screen/${tenant.id}` : `/screen/${tenant.id}`;
+    const screenUrl = new URL(`/screen/${tenant.id}`, appOrigin).toString();
     let emailSent = false;
     try {
       emailSent = await sendMosqueAccountDetails({ to: email, name, adminName, password, url: screenUrl });
@@ -145,6 +146,7 @@ export async function resetTenantPassword(id: string, password: string): Promise
   const parsedPassword = passwordSchema.safeParse(password);
   if (!parsedId.success) return { success: false, message: "Invalid account." };
   if (!parsedPassword.success) return { success: false, message: parsedPassword.error.issues[0]?.message ?? "Choose a stronger password." };
+  const appOrigin = await getAppOrigin();
   const tenant = await prisma.tenant.findFirst({
     where: { id, ...notDeletedTenantWhere },
     select: {
@@ -156,8 +158,7 @@ export async function resetTenantPassword(id: string, password: string): Promise
   if (!tenantAdmin) return { success: false, message: "This mosque account is no longer available." };
   const passwordHash = await bcrypt.hash(parsedPassword.data, 12);
   await prisma.user.update({ where: { id: tenantAdmin.id }, data: { passwordHash } });
-  const appUrl = process.env.APP_URL?.replace(/\/$/, "");
-  const screenUrl = appUrl ? `${appUrl}/screen/${id}` : `/screen/${id}`;
+  const screenUrl = new URL(`/screen/${id}`, appOrigin).toString();
   let emailSent = false;
   try {
     emailSent = await sendMosqueAccountDetails({

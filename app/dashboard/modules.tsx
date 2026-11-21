@@ -3,9 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
+import { ArrowRight, Clock3, Eye, EyeOff, LoaderCircle, Plus, Save, Trash2 } from "lucide-react";
 import {
   createLogo, createNewsItem, createSlide, deleteLogo, deleteNewsItem, deleteRingtone, deleteSlide,
-  importPrayerCalendar, savePrayerTime, setNewsItemActive, setSlideActive,
+  importPrayerCalendar, savePrayerTime, saveSlideshowPauseDuration, setNewsItemActive, setSlideActive,
   saveRingtone, updateNewsItem, updateSlide,
   type CalendarImportResult,
 } from "./actions";
@@ -30,6 +31,7 @@ type Ringtone = { id: string; fileName: string; contentType: string } | null;
 
 export function DashboardModules({
   section, schedules, prayerCity, prayerCountry, countryOptions, prayerMethod, prayerSchool, initialMonth,
+  slideshowPauseDuration,
   newsItems, slides, logos, ringtone, firstSchedule,
 }: {
   section: DashboardSection;
@@ -40,6 +42,7 @@ export function DashboardModules({
   prayerMethod: number;
   prayerSchool: number;
   initialMonth: string;
+  slideshowPauseDuration: number;
   newsItems: News[];
   slides: Slide[];
   logos: Logo[];
@@ -64,17 +67,9 @@ export function DashboardModules({
         <header className="module-heading"><div><p className="eyebrow">SCHEDULE</p><h2>Prayer times</h2><p>Enter the daily start, azan and Jamaat times, and add all Jumua services for that date.</p></div></header>
         <div className="module-panel">
           <h3>{firstSchedule ? "Update a day" : "Add a day"}</h3>
-          <form action={savePrayerTime} className="module-form">
-            <label className="field"><span>Date</span><input type="date" name="date" required defaultValue={defaultDate} /></label>
-            <div className="time-input-grid">{prayerFields.map(([name, label]) => {
-              const isJamat = name.endsWith("Jamat");
-              return <label className="field" key={name}><span>{label}</span><input type="time" name={name} required={!isJamat} defaultValue={firstSchedule?.timings[name] ?? (isJamat ? "" : "05:00")} /></label>;
-            })}</div>
-            <JumuaTimeFields initialTimes={firstSchedule?.jumuaTimes ?? []} />
-            <button className="button button-primary" type="submit">Save prayer times</button>
-          </form>
+          <PrayerTimeForm firstSchedule={firstSchedule} defaultDate={defaultDate} />
         </div>
-        <div className="module-panel ringtone-panel">
+        {/* <div className="module-panel ringtone-panel">
           <h3>Prayer ringtone</h3>
           <p>This sound plays once when each prayer reaches its Start time and again at its Azan time. If both times are the same, it plays once.</p>
           <form action={saveRingtone} className="news-create upload-create">
@@ -91,7 +86,7 @@ export function DashboardModules({
               <button className="button button-danger" type="submit">Remove</button>
             </form>
           </div>}
-        </div>
+        </div> */}
       </section>
       )}
 
@@ -164,7 +159,50 @@ export function DashboardModules({
       {(section === "all" || section === "screen-slides") && (
       <section className="module-section" id="slides">
         <header className="module-heading"><div><p className="eyebrow">DISPLAY CONTENT</p><h2>Screen slides</h2><p>Upload images, set display duration and arrange their order.</p></div></header>
-        <div className="module-panel"><form action={createSlide} className="news-create upload-create"><label className="field"><span>Slide image</span><input type="file" name="file" accept="image/jpeg,image/png,image/webp" required /></label><label className="field"><span>Duration in seconds</span><input type="number" name="duration" min={5} max={120} defaultValue={10} required /></label><button className="button button-primary" type="submit">Upload slide</button><small>JPEG, PNG or WebP. Maximum 4 MB per image.</small></form>
+        <div className="module-panel">
+          <form action={saveSlideshowPauseDuration} className="slide-display-settings">
+            <div className="slide-pause-intro">
+              <span className="slide-pause-icon"><Clock3 size={21} aria-hidden="true" /></span>
+              <div>
+                <p className="eyebrow">PRAYER-TIME DISPLAY</p>
+                <h3>Pause slides when prayer begins</h3>
+                <p>At the scheduled Start time, the current slide holds. The slideshow resumes automatically when the pause ends.</p>
+              </div>
+            </div>
+            <div className="slide-pause-controls">
+              <label className="field">
+                <span>Pause length</span>
+                <span className="slide-pause-input-wrap">
+                  <input
+                    id="slideshow-pause-duration"
+                    type="number"
+                    name="slideshowPauseDuration"
+                    min={0}
+                    max={120}
+                    defaultValue={slideshowPauseDuration ?? 0}
+                    required
+                  />
+                  <span>seconds</span>
+                </span>
+              </label>
+              <button className="button button-secondary" type="submit"><Save size={15} aria-hidden="true" />Save setting</button>
+            </div>
+            <div className="slide-pause-example" aria-label="Example: prayer starts, the current slide pauses, then the slideshow resumes">
+              <span className="slide-pause-example-label">EXAMPLE WITH 80 SECONDS</span>
+              <span>Prayer starts</span>
+              <ArrowRight size={15} aria-hidden="true" />
+              <strong>Slide holds for 80 seconds</strong>
+              <ArrowRight size={15} aria-hidden="true" />
+              <span>Slides resume</span>
+            </div>
+            <p className="slide-pause-note">Set the pause to <strong>0 seconds</strong> to keep the slideshow running without pausing.</p>
+          </form>
+          <form action={createSlide} className="news-create upload-create">
+            <label className="field"><span>Slide image</span><input type="file" name="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" required /></label>
+            <label className="field"><span>Duration in seconds</span><input type="number" name="duration" min={5} max={120} defaultValue={10} required /></label>
+            <button className="button button-primary" type="submit">Upload slide</button>
+            <small>JPEG, PNG, WebP, HEIC or HEIF. HEIC/HEIF photos are converted to JPEG. Maximum 4 MB per image.</small>
+          </form>
           {slides.length ? <div className="managed-list">{slides.map((slide) => <ManagedSlide key={slide.id} slide={slide} />)}</div> : <EmptyState text="No screen slides uploaded yet." />}
         </div>
       </section>
@@ -182,12 +220,63 @@ export function DashboardModules({
   );
 }
 
+function PrayerTimeForm({
+  firstSchedule,
+  defaultDate,
+}: {
+  firstSchedule: { date: string; timings: Record<string, string>; jumuaTimes: string[] } | null;
+  defaultDate: string;
+}) {
+  const [toast, setToast] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function notify(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 3600);
+  }
+
+  function submit(formData: FormData) {
+    startTransition(async () => {
+      try {
+        await savePrayerTime(formData);
+        notify("Prayer times saved.");
+      } catch (error) {
+        notify(error instanceof Error ? error.message : "Unable to save prayer times.");
+      }
+    });
+  }
+
+  return (
+    <>
+      <form action={submit} className="module-form">
+        <label className="field"><span>Date</span><input type="date" name="date" required defaultValue={defaultDate} /></label>
+        <div className="time-input-grid">{prayerFields.map(([name, label]) => {
+          const isOptional = name.endsWith("Jamat") || name === "sunrise" || name === "chaasht" || name === "zawal";
+          return <label className="field" key={name}><span>{label}</span><input type="time" name={name} required={!isOptional} defaultValue={firstSchedule?.timings[name] ?? (isOptional ? "" : "05:00")} /></label>;
+        })}</div>
+        <JumuaTimeFields initialTimes={firstSchedule?.jumuaTimes ?? []} />
+        <button className="button button-primary" type="submit" disabled={pending}>
+          {pending && <LoaderCircle className="spin" size={16} aria-hidden="true" />}
+          {pending ? "Saving…" : "Save prayer times"}
+        </button>
+      </form>
+      <div className={`toast ${toast ? "toast-visible" : ""}`} role="status" aria-live="polite">{toast}</div>
+    </>
+  );
+}
+
 function JumuaTimeFields({ initialTimes }: { initialTimes: string[] }) {
   const [times, setTimes] = useState(initialTimes.length ? initialTimes : [""]);
 
   return (
     <fieldset className="jumua-time-fields">
       <legend>Jumua times</legend>
+      <div className="jumua-time-toolbar">
+        <button className="button button-secondary jumua-add-button" type="button" onClick={() => setTimes((current) => [...current, ""])}>
+          <Plus size={14} aria-hidden="true" />
+          Add more
+        </button>
+      </div>
       {times.map((time, index) => (
         <div className="jumua-time-input" key={index}>
           <label className="field">
@@ -200,18 +289,17 @@ function JumuaTimeFields({ initialTimes }: { initialTimes: string[] }) {
             />
           </label>
           <button
-            className="button button-quiet"
+            className="button button-quiet jumua-remove-button"
             type="button"
+            disabled={times.length === 1}
             aria-label={`Remove Jumua time ${index + 1}`}
+            title={`Remove Jumua time ${index + 1}`}
             onClick={() => setTimes((current) => current.filter((_, row) => row !== index))}
           >
-            Remove
+            <Trash2 size={15} aria-hidden="true" />
           </button>
         </div>
       ))}
-      <button className="button button-secondary" type="button" onClick={() => setTimes((current) => [...current, ""])}>
-        Add another Jumua time
-      </button>
     </fieldset>
   );
 }
@@ -223,7 +311,66 @@ function ManagedNews({ item }: { item: News }) {
 
 function ManagedSlide({ slide }: { slide: Slide }) {
   const [pending, startTransition] = useTransition();
-  return <article className="managed-row"><Image className="slide-preview" src={`/dashboard/assets/slide/${slide.id}`} alt="" width={72} height={48} unoptimized /><div className="managed-copy"><strong>{slide.fileName}</strong><small>{slide.duration} seconds · Position {slide.position + 1} · {slide.isActive ? "Shown" : "Hidden"}</small></div><form action={updateSlide.bind(null, slide.id)} className="managed-order"><label className="sr-only" htmlFor={`slide-position-${slide.id}`}>Slide position</label><input id={`slide-position-${slide.id}`} type="number" name="position" min="0" max="10000" defaultValue={slide.position} /><label className="sr-only" htmlFor={`slide-duration-${slide.id}`}>Duration in seconds</label><input id={`slide-duration-${slide.id}`} type="number" name="duration" min="5" max="120" defaultValue={slide.duration} /><button className="button button-quiet" type="submit">Save</button></form><button className="button button-quiet" type="button" disabled={pending} onClick={() => startTransition(() => setSlideActive(slide.id, !slide.isActive))}>{slide.isActive ? "Hide" : "Show"}</button><form action={deleteSlide.bind(null, slide.id)} onSubmit={(event) => { if (!window.confirm("Remove this slide?")) event.preventDefault(); }}><button className="button button-danger" type="submit">Remove</button></form></article>;
+  const [hasChanges, setHasChanges] = useState(false);
+
+  function checkForChanges(form: HTMLFormElement) {
+    const formData = new FormData(form);
+    setHasChanges(
+      Number(formData.get("position")) !== slide.position ||
+      Number(formData.get("duration")) !== slide.duration,
+    );
+  }
+
+  return (
+    <article className="managed-row slide-managed-row">
+      <div className="slide-card-header">
+        <Image className="slide-preview" src={`/dashboard/assets/slide/${slide.id}`} alt="" width={72} height={48} unoptimized />
+        <div className="slide-card-heading">
+          <strong title={slide.fileName}>{slide.fileName}</strong>
+          <span className={`slide-status-badge ${slide.isActive ? "slide-status-shown" : "slide-status-hidden"}`}>
+            {slide.isActive ? "Shown" : "Hidden"}
+          </span>
+          <small className="slide-desktop-meta">
+            {slide.duration} seconds · Position {slide.position + 1} · {slide.isActive ? "Shown" : "Hidden"}
+          </small>
+        </div>
+      </div>
+      <form
+        action={updateSlide.bind(null, slide.id)}
+        className="managed-order slide-edit-form"
+        onChange={(event) => checkForChanges(event.currentTarget)}
+      >
+        <label className="slide-edit-field" htmlFor={`slide-position-${slide.id}`}>
+          <span className="sr-only">Position</span>
+          <input id={`slide-position-${slide.id}`} type="number" inputMode="numeric" name="position" min="0" max="10000" defaultValue={slide.position} required />
+        </label>
+        <label className="slide-edit-field" htmlFor={`slide-duration-${slide.id}`}>
+          <span className="sr-only">Duration (sec)</span>
+          <input id={`slide-duration-${slide.id}`} type="number" inputMode="numeric" name="duration" min="5" max="120" defaultValue={slide.duration} required />
+        </label>
+        <button className="button button-primary slide-save-button" type="submit" disabled={!hasChanges}>Save</button>
+      </form>
+      <div className="slide-actions">
+        <button
+          className="button button-quiet slide-icon-button"
+          type="button"
+          disabled={pending}
+          aria-label={slide.isActive ? "Hide slide" : "Show slide"}
+          title={slide.isActive ? "Hide slide" : "Show slide"}
+          onClick={() => startTransition(() => setSlideActive(slide.id, !slide.isActive))}
+        >
+          {slide.isActive ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+          <span className="slide-icon-label">{slide.isActive ? "Hide" : "Show"}</span>
+        </button>
+        <form action={deleteSlide.bind(null, slide.id)} onSubmit={(event) => { if (!window.confirm("Remove this slide?")) event.preventDefault(); }}>
+          <button className="button button-danger slide-icon-button" type="submit" aria-label="Remove slide" title="Remove slide">
+            <Trash2 size={18} aria-hidden="true" />
+            <span className="slide-icon-label">Remove</span>
+          </button>
+        </form>
+      </div>
+    </article>
+  );
 }
 
 function ManagedLogo({ logo }: { logo: Logo }) {

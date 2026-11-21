@@ -14,11 +14,9 @@ export async function sendMosqueAccountDetails({ to, name, adminName, password, 
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM } = process.env;
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASSWORD || !SMTP_FROM) return false;
 
-  const appUrl = process.env.APP_URL;
-  if (!appUrl) return false;
   let parsedUrl: URL;
   try {
-    parsedUrl = new URL(appUrl);
+    parsedUrl = new URL(url);
   } catch {
     return false;
   }
@@ -42,7 +40,7 @@ export async function sendMosqueAccountDetails({ to, name, adminName, password, 
   const safeEmail = escapeHtml(to);
   const safePassword = escapeHtml(password);
   const safeUrl = escapeHtml(url);
-  const loginUrl = new URL("/login", parsedUrl).toString();
+  const loginUrl = new URL("/login", parsedUrl.origin).toString();
   const safeLoginUrl = escapeHtml(loginUrl);
   await transport.sendMail({
     from: SMTP_FROM,

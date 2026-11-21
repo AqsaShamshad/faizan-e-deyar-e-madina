@@ -21,7 +21,7 @@ The application uses Prisma transactions for account provisioning and atomic tim
 
 3. Set `AUTH_SECRET` to a long, random secret. Set `SUPER_ADMIN_NAME`, `SUPER_ADMIN_EMAIL`, and `SUPER_ADMIN_PASSWORD`; the seed script requires a password of at least 12 characters.
 
-4. To email a newly created mosque administrator their screen link and login details, set `APP_URL` to the public site origin and configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`. The email includes the administrator's email and initial password; resetting a mosque administrator's password from `/admin` also emails the updated login details. Keep SMTP credentials only in `.env`, and share account details only with the intended administrator. Without SMTP settings, account creation and password resets still succeed but their details are not emailed.
+4. To email a newly created mosque administrator their screen link and login details, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`. The app uses `APP_URL` as the public site origin when set; otherwise, it derives the origin from the current request, which supports local development and deployments that forward the original host and protocol. Set `APP_URL` explicitly to your public HTTPS origin in production for a stable canonical link. The email includes the administrator's email and initial password; resetting a mosque administrator's password from `/admin` also emails the updated login details. Keep SMTP credentials only in `.env`, and share account details only with the intended administrator. Without SMTP settings, account creation and password resets still succeed but their details are not emailed.
 
 5. Validate the Prisma schema, generate the client, and apply the schema to your MongoDB database:
 
@@ -44,6 +44,8 @@ The application uses Prisma transactions for account provisioning and atomic tim
    ```
 
 Open `http://localhost:3000/login`. The super administrator can create mosque-admin accounts from `/admin`. Mosque administrators manage their mosque at `/dashboard`. Each public display has one unique ID-based link at `/screen/<tenant-id>`; the app emails this link and administrator login details when the account is created.
+
+On the **Screen slides** dashboard, the slideshow pause setting holds the current slide at each prayer's Start time, then resumes rotation after the selected number of seconds. Set it to `0` to disable the pause.
 
 ## Database Notes
 
